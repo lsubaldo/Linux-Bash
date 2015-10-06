@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <poll.h>
 #include <signal.h>
+#include <errno.h> 
 
 /* main helper functions */
 
@@ -67,7 +68,7 @@ int main(int argc, char **argv) {
 	//parallel = 1; 
 	int mode = 0;
 	int change = 0;
-	char mode_arr[] = {"sequential", "parallel"};
+	char *mode_arr[] = {"sequential", "parallel"};
 
 	// command prompt loop
 	char * prompt = "Prompt: ";
@@ -79,15 +80,15 @@ int main(int argc, char **argv) {
 		/*parse input --> array of pointers filled with arrays of 
 		pointers */
 
-		char** command_chunks = parse(buffer, ';'); //parse by ';'
+		char** command_chunks = parse(buffer, ";"); //parse by ";"
 		
 		// while loop to get size of command_chunks
-		chunk_count = 0;
+		int chunk_count = 0;
 		while (command_chunks[chunk_count] != NULL) {
 			chunk_count++;
 		}
 
-		char*** command_list = malloc((chunk_count+1)*(sizeof(char**));
+		char*** command_list = malloc((chunk_count+1)*sizeof(char**));
     		char* whitespace = " \t\n";
 		for (int i = 0; i < chunk_count; i++) {
 			command_list[i] = parse(command_chunks[i], 
@@ -102,7 +103,7 @@ int main(int argc, char **argv) {
   				if (strcmp(command_list[i][j], "exit")) {
 			    	printf("Exit called. Goodbye.");
 			    	fflush(stdout);
-			    	exit(); 
+			    	exit();      //exit takes a parameter 
 				}
 				else if (strcmp(command_list[i][j], "mode")) {
 		   	    	j++;
@@ -129,8 +130,8 @@ int main(int argc, char **argv) {
 				}
 				i++;
 			}
-
-		else if (mode == 1) { //parallel
+		}
+		else if (mode == 1) { //parallel mode
 			int i = 0;
 			while (command_list[i] != NULL) {
 				int j = 0;
@@ -155,7 +156,7 @@ int main(int argc, char **argv) {
 					pid_t pid_array[chunk_count+1];// last idx == NULL?
 					int arr_idx = 0;
 					int k = 0;	
-					int worked = 0; //Kt
+					//int worked = 0; //Kt
 					while (k < chunk_count) {
 						pid_t p = fork(); 
 						if (p == 0) {
@@ -164,15 +165,15 @@ int main(int argc, char **argv) {
 								/*worked = 0; //Kt's crap 
 							}
 							else {
-								worked = 1; */
-							}	
+								worked = 1; 
+							} */	
 						}
 						else if (p > 0) {
 						}
 						k++;
 					}
 				}
-		}	
+			}	
 			
 		 
 		/*- if mode change, set boolean */
@@ -180,12 +181,7 @@ int main(int argc, char **argv) {
 		/* check for exit command. If present, exit. */
 
 		/* mode change bool == 1, mode change */
+		}
 	}
-
-
-	
-
 	return 0;
 }
-
-
