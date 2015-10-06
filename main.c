@@ -71,15 +71,27 @@ int main(int argc, char **argv) {
 	char *mode_arr[] = {"sequential", "parallel"};
 
 	// command prompt loop
-	char * prompt = "Prompt: ";
+	char * prompt = "Prompt> ";
 	printf("%s", prompt);
 	fflush(stdout); //prints immediately 
 
     char buffer[1024];
 	while (fgets(buffer, 1024, stdin) != NULL) {
+
+		//Takes care of comments
+		int num = 0;
+		while (num < strlen(buffer)) {
+			if (buffer[num] == '#') {
+				buffer[num] = '\0'; 
+				break; 
+			}
+			num++; 
+		}
+
+		
+		
 		/*parse input --> array of pointers filled with arrays of 
 		pointers */
-
 		char** command_chunks = parse(buffer, ";"); //parse by ";"
 		
 		// while loop to get size of command_chunks
@@ -89,7 +101,7 @@ int main(int argc, char **argv) {
 		}
 
 		char*** command_list = malloc((chunk_count+1)*sizeof(char**));
-    		char* whitespace = " \t\n";
+    	char* whitespace = " \t\n";
 		for (int i = 0; i < chunk_count; i++) {
 			command_list[i] = parse(command_chunks[i], 
 			whitespace);
@@ -100,10 +112,10 @@ int main(int argc, char **argv) {
 			int i = 0;
 	  	    while (command_list[i] != NULL) {
 				int j = 0;
-  				if (strcmp(command_list[i][j], "exit")) {
-			    	printf("Exit called. Goodbye.");
+  				if (strcasecmp(command_list[i][j], "exit")) {
+			    	printf("Exit called. Goodbye.\n");
 			    	fflush(stdout);
-			    	exit();      //exit takes a parameter 
+			    	exit(0);      //exit takes a parameter 
 				}
 				else if (strcmp(command_list[i][j], "mode")) {
 		   	    	j++;
@@ -136,9 +148,9 @@ int main(int argc, char **argv) {
 			while (command_list[i] != NULL) {
 				int j = 0;
   				if (strcmp(command_list[i][j], "exit")) {
-			    	printf("Exit called. Goodbye.");
+			    	printf("Exit called. Goodbye. ");
 			    	fflush(stdout);
-			    	exit(); 
+			    	exit(0); 
 				}
 				else if (strcmp(command_list[i][j], "mode")) {
 		   	    	j++;
@@ -182,6 +194,7 @@ int main(int argc, char **argv) {
 
 		/* mode change bool == 1, mode change */
 		}
-	}
+	} 
 	return 0;
+}
 }
