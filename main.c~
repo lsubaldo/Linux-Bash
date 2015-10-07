@@ -100,6 +100,8 @@ int main(int argc, char **argv) {
 			chunk_count++;
 		}
 
+		//is it necessary to malloc this on the heap? 
+		//char** command_list[chunk_count+1]; 
 		char*** command_list = malloc((chunk_count+1)*sizeof(char**));
     	char* whitespace = " \t\n";
 		for (int i = 0; i < chunk_count; i++) {
@@ -146,15 +148,17 @@ int main(int argc, char **argv) {
 			    		else if (p > 0) {
 							wait(&p);
 			    		}
-					}
+					} //end of else
 					i++;
-			}
-			}
+				} //end of outer else 
+				
 			//needed to reprompt user
 			printf("%s", prompt); 
 			fflush(stdout); 
-			fgets(buffer, 1024, stdin);
-		}
+			fgets(buffer, 1024, stdin); 
+			} //end of while loop
+		} //end of sequential 
+
 		else if (mode == 1) { //parallel mode
 			int i = 0;
 			while (command_list[i] != NULL) {
@@ -167,7 +171,7 @@ int main(int argc, char **argv) {
 			    		printf("Exit called. Goodbye.\n");
 			    		fflush(stdout);
 			    		exit(0);      //exit takes a parameter 
-					}
+					} //end of if statement
 					else if (strcasecmp(command_list[i][j], mode_word) == 0) {
 		   	    		j++;
 						printf("%s\n", command_list[i][j]); 
@@ -180,7 +184,7 @@ int main(int argc, char **argv) {
 			    		else if (strcasecmp(command_list[i][j], par) == 0) {
 							change = 1;
 			    		}
-					}
+					} //end of else if
 					else {
 						pid_t pid_array[chunk_count+1];// last idx == NULL?
 						int arr_idx = 0;
@@ -198,19 +202,20 @@ int main(int argc, char **argv) {
 								} 	
 							}
 							else if (p > 0) {
+								//do something here - wait 
 							}
 							k++;
 						}
-				}
-			} 
+					} //end of else
+					i++;
+				} //end of outer else statement
 			
-		 
+			} //end of while loop
+
 		/*- if mode change, set boolean */
-
-		/* check for exit command. If present, exit. */
-
 		/* mode change bool == 1, mode change */
-		}
-	} 
+
+		} //end of parallel mode
+	} //end of big while loop
 	return 0;
 }
