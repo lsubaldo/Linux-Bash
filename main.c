@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
 		//is it necessary to malloc this on the heap? 
 		//char** command_list[chunk_count+1]; 
 		char*** command_list = malloc((chunk_count+1)*sizeof(char**));
-    	char* whitespace = " \t\n";
+    	char* whitespace = " \t\r\n";
 		for (int i = 0; i < chunk_count; i++) {
 			command_list[i] = parse(command_chunks[i], whitespace);
 		}
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
 		if (mode == 0) {       // sequential mode
 			int i = 0;
 	  	    while (command_list[i] != NULL) {
-				if (command_list[i][0] == NULL) {
+				if (command_list[i][0] == NULL) { // user enters only spaces, e.g. ; " " ; or " "
 					i++;
 				}	
 				else {			
@@ -162,9 +162,10 @@ int main(int argc, char **argv) {
 		else if (mode == 1) { //parallel mode
 			int i = 0;
 			while (command_list[i] != NULL) {
-				if (command_list[i][0] == NULL) {
+				if (command_list[i][0] == NULL) { // user enters only spaces, e.g. ; " " ; or " "
 					i++;
-				}	
+				}
+					
 				else {			
 					int j = 0;
   					if (strcasecmp(command_list[i][j], ex) == 0) {
@@ -195,11 +196,7 @@ int main(int argc, char **argv) {
 							if (p == 0) {
 								if (execv(command_list[i][j], command_list[i]) < 0) {
 			           				fprintf(stderr, "execv failed: %s\n", strerror(errno));	
-									//worked = 0; //Kt's crap 
-									}
-								else {
-									//worked = 1; 
-								} 	
+									}	
 							}
 							else if (p > 0) {
 								//do something here - wait 
