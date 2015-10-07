@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
 			num++; 
 		}
 
-		
+		//printf("%s\n", buffer); 
 		
 		/*parse input --> array of pointers filled with arrays of 
 		pointers */
@@ -103,89 +103,106 @@ int main(int argc, char **argv) {
 		char*** command_list = malloc((chunk_count+1)*sizeof(char**));
     	char* whitespace = " \t\n";
 		for (int i = 0; i < chunk_count; i++) {
-			command_list[i] = parse(command_chunks[i], 
-			whitespace);
+			command_list[i] = parse(command_chunks[i], whitespace);
 		}
 		command_list[chunk_count] = NULL;
-
+		char *ex = "exit"; 
+		char *mode_word = "mode";
+		char *seq = "s";
+		char *par = "p";
 		if (mode == 0) {       // sequential mode
 			int i = 0;
 	  	    while (command_list[i] != NULL) {
-				int j = 0;
-  				if (strcasecmp(command_list[i][j], "exit")) {
-			    	printf("Exit called. Goodbye.\n");
-			    	fflush(stdout);
-			    	exit(0);      //exit takes a parameter 
-				}
-				else if (strcmp(command_list[i][j], "mode")) {
-		   	    	j++;
-			    	if (*command_list[i][j] == NULL) {
-						printf("Current mode: %s\n", mode_arr[mode]);
-			    	}
-			    	else if (*command_list[i][j] == 's') {
-						change = 0;
-			    	}
-			    	else if (*command_list[i][j] == 'p') {
-						change = 1;
-			    	}
-				}
-				else {
-			    	pid_t p = fork(); 
-			    	if (p == 0) {
-						if (execv(command_list[i][j], command_list[i]) < 0) {
-			           		fprintf(stderr, "execv failed: %s\n", strerror(errno));
-						}
-			    	}
-			    	else if (p > 0) {
-						wait(&p);
-			    	}
-				}
-				i++;
+				if (command_list[i][0] == NULL) {
+					i++;
+				}	
+				else {			
+					int j = 0;
+  					if (strcasecmp(command_list[i][j], ex) == 0) {
+			    		printf("Exit called. Goodbye.\n");
+			    		fflush(stdout);
+			    		exit(0);      //exit takes a parameter 
+					}
+					else if (strcasecmp(command_list[i][j], mode_word) == 0) {
+		   	    		j++;
+						printf("%s\n", command_list[i][j]); 
+			    		if (command_list[i][j] == NULL) {
+							printf("Current mode: %s\n", mode_arr[mode]);
+			    		}
+			    		else if (strcasecmp(command_list[i][j], seq) == 0) {
+							change = 0;
+			    		}
+			    		else if (strcasecmp(command_list[i][j], par) == 0) {
+							change = 1;
+			    		}
+					}
+					else {
+			    		pid_t p = fork(); 
+			    		if (p == 0) {
+							if (execv(command_list[i][j], command_list[i]) < 0) {
+			           			fprintf(stderr, "execv failed: %s\n", strerror(errno));
+							}
+			    		}
+			    		else if (p > 0) {
+							wait(&p);
+			    		}
+					}
+					i++;
 			}
+			}
+			//needed to reprompt user
+			printf("%s", prompt); 
+			fflush(stdout); 
+			fgets(buffer, 1024, stdin);
 		}
 		else if (mode == 1) { //parallel mode
 			int i = 0;
 			while (command_list[i] != NULL) {
-				int j = 0;
-  				if (strcmp(command_list[i][j], "exit")) {
-			    	printf("Exit called. Goodbye. ");
-			    	fflush(stdout);
-			    	exit(0); 
-				}
-				else if (strcmp(command_list[i][j], "mode")) {
-		   	    	j++;
-			    	if (*command_list[i][j] == NULL) {
-						printf("Current mode: %s\n", mode_arr[mode]);
-			    	}
-			    	else if (*command_list[i][j] == 's') {
-						change = 0;
-			    	}
-			    	else if (*command_list[i][j] == 'p') {
-						change = 1;
-			    	}
-				}
-				else {
-					pid_t pid_array[chunk_count+1];// last idx == NULL?
-					int arr_idx = 0;
-					int k = 0;	
-					//int worked = 0; //Kt
-					while (k < chunk_count) {
-						pid_t p = fork(); 
-						if (p == 0) {
-							if (execv(command_list[i][j], command_list[i]) < 0) {
-			           			fprintf(stderr, "execv failed: %s\n", strerror(errno));	
-								/*worked = 0; //Kt's crap 
-							}
-							else {
-								worked = 1; 
-							} */	
-						}
-						else if (p > 0) {
-						}
-						k++;
+				if (command_list[i][0] == NULL) {
+					i++;
+				}	
+				else {			
+					int j = 0;
+  					if (strcasecmp(command_list[i][j], ex) == 0) {
+			    		printf("Exit called. Goodbye.\n");
+			    		fflush(stdout);
+			    		exit(0);      //exit takes a parameter 
 					}
+					else if (strcasecmp(command_list[i][j], mode_word) == 0) {
+		   	    		j++;
+						printf("%s\n", command_list[i][j]); 
+			    		if (command_list[i][j] == NULL) {
+							printf("Current mode: %s\n", mode_arr[mode]);
+			    		}
+			    		else if (strcasecmp(command_list[i][j], seq) == 0) {
+							change = 0;
+			    		}
+			    		else if (strcasecmp(command_list[i][j], par) == 0) {
+							change = 1;
+			    		}
+					}
+					else {
+						pid_t pid_array[chunk_count+1];// last idx == NULL?
+						int arr_idx = 0;
+						int k = 0;	
+						//int worked = 0; //Kt
+						while (k < chunk_count) {
+							pid_t p = fork(); 
+							if (p == 0) {
+								if (execv(command_list[i][j], command_list[i]) < 0) {
+			           				fprintf(stderr, "execv failed: %s\n", strerror(errno));	
+									//worked = 0; //Kt's crap 
+									}
+								else {
+									//worked = 1; 
+								} 	
+							}
+							else if (p > 0) {
+							}
+							k++;
+						}
 				}
-			}	
+			} 
 			
 		 
 		/*- if mode change, set boolean */
@@ -196,5 +213,4 @@ int main(int argc, char **argv) {
 		}
 	} 
 	return 0;
-}
 }
