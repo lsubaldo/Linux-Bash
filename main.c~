@@ -62,7 +62,7 @@ void free_tokens(char **tokens) {
     free(tokens); // then free the array
 }
 
-void uncomment(const char* str) {
+void uncomment(char* str) {
 	//Takes care of comments
 	int num = 0;
 	while (num < strlen(str)) {

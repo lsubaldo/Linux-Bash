@@ -104,10 +104,7 @@ int main(int argc, char **argv) {
 		while (command_chunks[chunk_count] != NULL) {
 			chunk_count++;
 		}
-
-		//is it necessary to malloc this on the heap? 
-		//char** command_list[chunk_count+1]; 
-		char*** command_list = malloc((chunk_count+1)*sizeof(char**));
+		char** command_list[chunk_count+1]; 
     	char* whitespace = " \t\r\n";
 		for (int i = 0; i < chunk_count; i++) {
 			command_list[i] = parse(command_chunks[i], whitespace);
