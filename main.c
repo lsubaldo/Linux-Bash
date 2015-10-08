@@ -21,7 +21,7 @@ typedef struct node {
 } node;
 
 typedef struct directory {
-	char dir[32];
+	char dir[256];
 	struct directory *next; 
 } directory; 
 
@@ -87,38 +87,41 @@ void check() {
 	waitpid(-1, &stat, WNOHANG);
 }
 
-directory *load_dir(const char *filename, int *num) {
+directory *load_dir(const char *filename) {
 	FILE *fp = fopen(filename, "r"); 
 	directory *head = NULL; 
 	char new[256];
 	while (fgets(new, 256, fp) != NULL) {
-		char *new_dir = strtok(new, " \t\n");
+		new[strlen(new)-1] = '/'; 
+		directory *d = malloc(sizeof(directory));
+		strcpy(d->dir, new);
 		if (head == NULL)  {
-			directory *d = NULL;
-			strcpy(d->dir, new_dir);
 			d->next = NULL; 
 			head = d;	
 		}
 		else {
-			directory *tmp = NULL;
-			strcpy(tmp->dir, new_dir);
-			tmp->next = head;
-			head = tmp;
+			directory *tmp = head;
+			while (tmp->next != NULL) {
+				tmp = tmp->next; 
+			}
+			d->next = NULL; 
+			tmp->next = d; 
 		} 
-		(*num)++; //keeps track of the number of directories there are 
-					//is this even necessary? 
 	}
 	fclose(fp);
 	return head;
 }
 
-
-bool is_file(directory *dir_list, char *buf) {
+//checks whether command is a valid file in a directory 
+char *is_file(directory *dir_list, char *buf) {
 	struct stat statresult; 
 	bool is_f = false;
+	char *command; 
 	while (dir_list != NULL) {
-		char *command = strcat(dir_list->dir, "/");
-		command = strcat(command, buf); 
+		//char *command = strcat(dir_list->dir, "/");
+		//char *temp = NULL;
+		//strcpy(temp, dir_list->dir); 
+		command = strcat(dir_list->dir, buf); 
 		int rv = stat(command, &statresult); 
 		if (rv == 0) {
 			is_f = true; 
@@ -126,14 +129,13 @@ bool is_file(directory *dir_list, char *buf) {
 		}
 		dir_list = dir_list->next; 
 	}
-	return is_f; 
+	return command; 
 }
 
 /* MAIN */ 
 int main(int argc, char **argv) {
 
-	//int num_dir = 0; 
-	//directory *shell_dir = load_dir("shell-config.txt", &num_dir); 
+	directory *shell_dir = load_dir("shell-config"); 
 	// mode settings
 	//sequential = 0;
 	//parallel = 1; 
@@ -210,17 +212,21 @@ int main(int argc, char **argv) {
 			    		}
 					}
 					else {
-						//if (is_file(shell_dir, command_list[i][j])) { 
-							pid_t p = fork(); 
+						char *cmd = is_file(shell_dir, command_list[i][j]);
+						if (cmd != NULL) { 
+							pid_t p = fork();
+							//command_list[i] = cmd;  
 							if (p == 0) {
-								if (execv(command_list[i][j], command_list[i]) < 0) {
-					       			fprintf(stderr, "execv failed: %s\n", strerror(errno));
-								}
+								execv(cmd, command_list[i]);  
+								//execv(command_list[i][j], command_list[i]); 
+								//if (execv(command_list[i][j], command_list[i]) < 0) {
+					       		//	fprintf(stderr, "execv failed: %s\n", strerror(errno));
+								//}
 							}
 							else if (p > 0) {
 								wait(&p);
 							}
-						//}
+						}
 					} //end of else
 					i++;
 				} //end of outer else 
