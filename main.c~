@@ -123,17 +123,12 @@ void free_paths(directory *paths) {
 //checks whether command is a valid file in a directory 
 char *is_file(directory *dir_list, char *buf) {
 	struct stat statresult; 
-	//bool is_f = false;
 	while (dir_list != NULL) {
-		//char *command = strcat(dir_list->dir, "/");
-		char *temp = strdup(dir_list->dir);
-		//strcpy(temp, dir_list->dir); 
+		char *temp = strdup(dir_list->dir); 
 		char *command = strcat(temp, buf); 
 		printf("%s\n", command);
 		int rv = stat(command, &statresult); 
 		if (rv == 0) {
-			//is_f = true; 
-		//	break;
 			return command;
 		}
 		free(temp);
@@ -241,17 +236,19 @@ int main(int argc, char **argv) {
 							//command_list[i] = &cmd;  
 							if (p == 0) {
 								execv(cmd, command_list[i]); 
-								printf("%d\n", execv(cmd, command_list[i])); 
+								/*printf("%d\n", execv(cmd, command_list[i])); 
 								printf("%s\n", cmd);  
 								int k = 0; 
 								while (k < chunk_count) {
 									printf("%s\n", command_list[i][k]); 
 									k++; 
-								}
-								//execv(command_list[i][j], command_list[i]); 
+								} */
+								
+								//Code from Part 1 
+								/*execv(command_list[i][j], command_list[i]); 
 								//if (execv(command_list[i][j], command_list[i]) < 0) {
 					       		//	fprintf(stderr, "execv failed: %s\n", strerror(errno));
-								//}
+								}*/
 							}
 							else if (p > 0) {
 								wait(&p);
@@ -265,6 +262,7 @@ int main(int argc, char **argv) {
 
 		else if (mode == 1) { //parallel mode
 			int i = 0;
+			int children = 0;
 			node *list = NULL;
 			while (command_list[i] != NULL) {
 				if (command_list[i][0] == NULL) { //user enters only spaces, e.g. ; " " ; or " "
@@ -292,18 +290,18 @@ int main(int argc, char **argv) {
 					} //end of else if
 					else {
 						pid_t p = fork(); 
-						int ran = 0;
+						//int ran = 0;
 						if (p == 0) {
-							setpgid(0, 0);
+							//setpgid(0, 0);
 							if (execv(command_list[i][j], command_list[i]) < 0) {
 		           				fprintf(stderr, "execv failed: %s\n", strerror(errno));	
 							}
-							else {
-								ran = 1; 
-							}
+							children++; 
 						}
 						else if (p > 0) {
-							if (ran == 1) {
+							int status = 0;
+							waitpid(-1, &status, WNOHANG); 
+							/*if (ran == 1) {
 								if (list == NULL)  {
 									node *head = NULL; 
 									head->p = p;
@@ -316,7 +314,7 @@ int main(int argc, char **argv) {
 									tmp->next = list;
 									list = tmp;
 								} 
-							}
+							} */
 						} //end of parent statement
 					} //end of else
 					i++;
@@ -326,7 +324,7 @@ int main(int argc, char **argv) {
 			while (iter_node != NULL) {
 				int status = 0; 
 				waitpid(-1, &status, WNOHANG);
-				iter_node = iter_node->next;
+				iter_node = iter_node->next; 
 			}
 		} //end of parallel mode
 		mode = change; // mode changes if 'change' has been modified
