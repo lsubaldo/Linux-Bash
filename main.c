@@ -112,30 +112,48 @@ directory *load_dir(const char *filename) {
 	return head;
 }
 
+void free_paths(directory *paths) {
+    while (paths != NULL) {
+         directory *temp = paths; 
+         paths = paths->next;
+	 	free(temp);
+    }
+}
+
 //checks whether command is a valid file in a directory 
 char *is_file(directory *dir_list, char *buf) {
 	struct stat statresult; 
-	bool is_f = false;
-	char *command; 
 	while (dir_list != NULL) {
-		//char *command = strcat(dir_list->dir, "/");
-		//char *temp = NULL;
-		//strcpy(temp, dir_list->dir); 
-		command = strcat(dir_list->dir, buf); 
+		char *temp = strdup(dir_list->dir); 
+		char *command = strcat(temp, buf); 
+		printf("%s\n", command);
 		int rv = stat(command, &statresult); 
 		if (rv == 0) {
-			is_f = true; 
-			break;
+			return command;
 		}
+		free(temp);
 		dir_list = dir_list->next; 
-	}
-	return command; 
+	} 
+	return NULL;
+}
+
+/*
+ *Put here for debugging purposes. 
+ */
+void list_print(const directory *list) {
+    int i = 0;
+    printf("In list_print\n");
+    while (list != NULL) {
+        printf("List item %d: %s\n", i++, list->dir);
+        list = list->next;
+    }
 }
 
 /* MAIN */ 
 int main(int argc, char **argv) {
 
 	directory *shell_dir = load_dir("shell-config"); 
+	list_print(shell_dir); 
 	// mode settings
 	//sequential = 0;
 	//parallel = 1; 
@@ -215,9 +233,16 @@ int main(int argc, char **argv) {
 						char *cmd = is_file(shell_dir, command_list[i][j]);
 						if (cmd != NULL) { 
 							pid_t p = fork();
-							//command_list[i] = cmd;  
+							//command_list[i] = &cmd;  
 							if (p == 0) {
-								execv(cmd, command_list[i]);  
+								execv(cmd, command_list[i]); 
+								printf("%d\n", execv(cmd, command_list[i])); 
+								printf("%s\n", cmd);  
+								int k = 0; 
+								while (k < chunk_count) {
+									printf("%s\n", command_list[i][k]); 
+									k++; 
+								}
 								//execv(command_list[i][j], command_list[i]); 
 								//if (execv(command_list[i][j], command_list[i]) < 0) {
 					       		//	fprintf(stderr, "execv failed: %s\n", strerror(errno));
