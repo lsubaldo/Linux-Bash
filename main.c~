@@ -126,7 +126,6 @@ char *is_file(directory *dir_list, char *buf) {
 	while (dir_list != NULL) {
 		char *temp = strdup(dir_list->dir); 
 		char *command = strcat(temp, buf); 
-		printf("%s\n", command);
 		int rv = stat(command, &statresult); 
 		if (rv == 0) {
 			return command;
@@ -153,7 +152,8 @@ void list_print(const directory *list) {
 int main(int argc, char **argv) {
 
 	directory *shell_dir = load_dir("shell-config"); 
-	list_print(shell_dir); 
+	//list_print(shell_dir); 
+
 	// mode settings
 	//sequential = 0;
 	//parallel = 1; 
@@ -199,6 +199,8 @@ int main(int argc, char **argv) {
 			command_list[i] = parse(command_chunks[i], whitespace);
 		}
 		command_list[chunk_count] = NULL;
+
+		//Built-in function and mode variables 
 		char *ex = "exit"; 
 		char *mode_word = "mode";
 		char *seq = "s";
@@ -211,14 +213,15 @@ int main(int argc, char **argv) {
 				}	
 				else {			
 					int j = 0;
-  					if (strcasecmp(command_list[i][j], ex) == 0) {
+  					if (strcasecmp(command_list[i][j], ex) == 0) { //exit command called
 			    		printf("Exit called. Goodbye.\n");
 			    		fflush(stdout);
-			    		exit(0);      //exit takes a parameter 
+						free_paths(shell_dir);   //free linked list before exit
+						free_tokens(command_chunks); //free tokens before exit
+			    		exit(0);     
 					}
 					else if (strcasecmp(command_list[i][j], mode_word) == 0) {
 		   	    		j++;
-						//printf("%s\n", command_list[i][j]); 
 			    		if (command_list[i][j] == NULL) {
 							printf("Current mode: %s\n", mode_arr[mode]);
 			    		}
@@ -230,20 +233,26 @@ int main(int argc, char **argv) {
 			    		}
 					}
 					else {
-						char *cmd = is_file(shell_dir, command_list[i][j]);
+						char *cmd = NULL;
+						bool has_slash = false;
+						char *b = command_list[i][j];
+						for (int n=0 ; n<strlen(b); n++) {
+							if (b[n] == '/') {
+								has_slash = true;
+								break;
+							}
+						}
+						if (has_slash) {
+							cmd = b; 
+						}
+						else {
+							cmd = is_file(shell_dir, command_list[i][j]);
+						}
 						if (cmd != NULL) { 
 							pid_t p = fork();
 							//command_list[i] = &cmd;  
 							if (p == 0) {
 								execv(cmd, command_list[i]); 
-								/*printf("%d\n", execv(cmd, command_list[i])); 
-								printf("%s\n", cmd);  
-								int k = 0; 
-								while (k < chunk_count) {
-									printf("%s\n", command_list[i][k]); 
-									k++; 
-								} */
-								
 								//Code from Part 1 
 								/*execv(command_list[i][j], command_list[i]); 
 								//if (execv(command_list[i][j], command_list[i]) < 0) {
@@ -273,6 +282,8 @@ int main(int argc, char **argv) {
   					if (strcasecmp(command_list[i][j], ex) == 0) { //exit command called
 			    		printf("Exit called. Goodbye.\n");
 			    		fflush(stdout);
+						free_paths(shell_dir); //free linked list before exit
+						free_tokens(command_chunks); //free tokens before exit
 			    		exit(0);      
 					} //end of if statement
 					else if (strcasecmp(command_list[i][j], mode_word) == 0) { //mode
