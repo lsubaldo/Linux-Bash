@@ -132,8 +132,8 @@ bool is_file(directory *dir_list, char *buf) {
 /* MAIN */ 
 int main(int argc, char **argv) {
 
-	int num_dir = 0; 
-	directory *shell_dir = load_dir("shell-config.txt", &num_dir); 
+	//int num_dir = 0; 
+	//directory *shell_dir = load_dir("shell-config.txt", &num_dir); 
 	// mode settings
 	//sequential = 0;
 	//parallel = 1; 
@@ -210,7 +210,7 @@ int main(int argc, char **argv) {
 			    		}
 					}
 					else {
-						if (is_file(shell_dir, command_list[i][j])) { 
+						//if (is_file(shell_dir, command_list[i][j])) { 
 							pid_t p = fork(); 
 							if (p == 0) {
 								if (execv(command_list[i][j], command_list[i]) < 0) {
@@ -220,7 +220,7 @@ int main(int argc, char **argv) {
 							else if (p > 0) {
 								wait(&p);
 							}
-						}
+						//}
 					} //end of else
 					i++;
 				} //end of outer else 
