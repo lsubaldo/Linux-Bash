@@ -62,6 +62,11 @@ void free_tokens(char **tokens) {
     free(tokens); // then free the array
 }
 
+void testingFn() {
+	int i = 0;
+	i++;
+}
+
 void uncomment(char* str) {
 	//Takes care of comments
 	int num = 0;
@@ -114,7 +119,7 @@ int main(int argc, char **argv) {
 		char *mode_word = "mode";
 		char *seq = "s";
 		char *par = "p";
-		if (mode == 0) {       // sequential mode
+		if (mode == 0) { // sequential mode
 			int i = 0;
 	  	    while (command_list[i] != NULL) {
 				if (command_list[i][0] == NULL) { // user enters only spaces, e.g. ; " " ; or " "
@@ -158,6 +163,7 @@ int main(int argc, char **argv) {
 
 		else if (mode == 1) { //parallel mode
 			int i = 0;
+			node *list = NULL;
 			while (command_list[i] != NULL) {
 				if (command_list[i][0] == NULL) { // user enters only spaces, e.g. ; " " ; or " "
 					i++;
@@ -183,56 +189,42 @@ int main(int argc, char **argv) {
 			    		}
 					} //end of else if
 					else {
-						node *list = NULL;
-						int k = 0;	
-						while (k < chunk_count) {
-							pid_t p = fork(); 
-							int ran = 0;
-							if (p == 0) {
-								if (execv(command_list[i][j], command_list[i]) < 0) {
-			           				fprintf(stderr, "execv failed: %s\n", strerror(errno));	
+						pid_t p = fork(); 
+						int ran = 0;
+						if (p == 0) {
+							if (execv(command_list[i][j], command_list[i]) < 0) {
+		           				fprintf(stderr, "execv failed: %s\n", strerror(errno));	
+							}
+							else {
+								ran = 1;
+							}
+						}
+						else if (p > 0) {
+							if (ran == 1) {
+								if (list == NULL)  {
+									node *head = NULL; 
+									head->p = p;
+									head->next = NULL; 
+									list = head;	
 								}
 								else {
-									ran = 1;
-								}
-								exit(0);
+									node *tmp = NULL;
+									tmp->p = p;
+									tmp->next = list;
+									list = tmp;
+								} 
 							}
-							else if (p > 0) {
-								if (ran == 1) {
-									if (list == NULL)  {
-										node *head = NULL; 
-										head->p = p;
-										head->next = NULL; 
-										list = head;	
-									}
-									else {
-										node *tmp = NULL;
-										tmp->p = p;
-										tmp->next = list;
-										list = tmp;
-									} 
-								}
-								k++;
-							} //end of parent statement
-						} //end of while 
-
-						/*node * iter_node = list;
-						while (iter_node != NULL) {
-							int status = 0;
-							waitpid(iter_node->p, &status, 1);
-							iter_node = iter_node->next;
-						} */
+						} //end of parent statement
 					} //end of else
-						node * iter_node = list;
-						while (iter_node != NULL) {
-							int status = 0;
-							waitpid(iter_node->p, &status, 1);
-							iter_node = iter_node->next;
-						}
 					i++;
 				} //end of outer else statement
-			
 			} //end of parallel while loop
+			node * iter_node = list; //original wait loop
+			while (iter_node != NULL) {
+				int status = 0;
+				waitpid(iter_node->p, &status, 1);
+				iter_node = iter_node->next;
+			}
 		} //end of parallel mode
 		mode = change; // mode changes if 'change' has been modified
 	} //end of big while loop
