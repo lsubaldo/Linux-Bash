@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <poll.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -11,11 +13,17 @@
 #include <poll.h>
 #include <signal.h>
 #include <errno.h> 
+#include <stdbool.h> 
 
 typedef struct node {
 	pid_t p;
 	struct node * next;
 } node;
+
+typedef struct directory {
+	char dir[32];
+	struct directory *next; 
+} directory; 
 
 /* main helper functions */
 
@@ -62,11 +70,6 @@ void free_tokens(char **tokens) {
     free(tokens); // then free the array
 }
 
-void testingFn() {
-	int i = 0;
-	i++;
-}
-
 void uncomment(char* str) {
 	//Takes care of comments
 	int num = 0;
@@ -79,10 +82,58 @@ void uncomment(char* str) {
 	}
 }
 
-/* MAIN */ 
+void check() {
+    int stat;
+	waitpid(-1, &stat, WNOHANG);
+}
 
+directory *load_dir(const char *filename, int *num) {
+	FILE *fp = fopen(filename, "r"); 
+	directory *head = NULL; 
+	char new[256];
+	while (fgets(new, 256, fp) != NULL) {
+		char *new_dir = strtok(new, " \t\n");
+		if (head == NULL)  {
+			directory *d = NULL;
+			strcpy(d->dir, new_dir);
+			d->next = NULL; 
+			head = d;	
+		}
+		else {
+			directory *tmp = NULL;
+			strcpy(tmp->dir, new_dir);
+			tmp->next = head;
+			head = tmp;
+		} 
+		(*num)++; //keeps track of the number of directories there are 
+					//is this even necessary? 
+	}
+	fclose(fp);
+	return head;
+}
+
+
+bool is_file(directory *dir_list, char *buf) {
+	struct stat statresult; 
+	bool is_f = false;
+	while (dir_list != NULL) {
+		char *command = strcat(dir_list->dir, "/");
+		command = strcat(command, buf); 
+		int rv = stat(command, &statresult); 
+		if (rv == 0) {
+			is_f = true; 
+			break;
+		}
+		dir_list = dir_list->next; 
+	}
+	return is_f; 
+}
+
+/* MAIN */ 
 int main(int argc, char **argv) {
 
+	int num_dir = 0; 
+	directory *shell_dir = load_dir("shell-config.txt", &num_dir); 
 	// mode settings
 	//sequential = 0;
 	//parallel = 1; 
@@ -92,6 +143,19 @@ int main(int argc, char **argv) {
 
     char buffer[1024];
 	while (1) { // loop only exits through an exit() system call
+		if (mode == 1) {
+        	check();
+			signal(SIGCHLD, check);
+		}
+
+		/* Code for Part II 
+        struct pollfd pfd[1];
+		pfd[0].fd = 0;
+		pfd[0].events = POLLIN;
+        pfd[0].revents = 0;
+        poll(&pfd[0], 1, 1000);
+		*/
+
 		// command prompt loop
 		char * prompt = "Prompt> ";
 		printf("%s", prompt);
@@ -146,15 +210,17 @@ int main(int argc, char **argv) {
 			    		}
 					}
 					else {
-			    		pid_t p = fork(); 
-			    		if (p == 0) {
-							if (execv(command_list[i][j], command_list[i]) < 0) {
-			           			fprintf(stderr, "execv failed: %s\n", strerror(errno));
+						if (is_file(shell_dir, command_list[i][j])) { 
+							pid_t p = fork(); 
+							if (p == 0) {
+								if (execv(command_list[i][j], command_list[i]) < 0) {
+					       			fprintf(stderr, "execv failed: %s\n", strerror(errno));
+								}
 							}
-			    		}
-			    		else if (p > 0) {
-							wait(&p);
-			    		}
+							else if (p > 0) {
+								wait(&p);
+							}
+						}
 					} //end of else
 					i++;
 				} //end of outer else 
@@ -165,7 +231,7 @@ int main(int argc, char **argv) {
 			int i = 0;
 			node *list = NULL;
 			while (command_list[i] != NULL) {
-				if (command_list[i][0] == NULL) { // user enters only spaces, e.g. ; " " ; or " "
+				if (command_list[i][0] == NULL) { //user enters only spaces, e.g. ; " " ; or " "
 					i++;
 				}
 				else {			
@@ -192,11 +258,12 @@ int main(int argc, char **argv) {
 						pid_t p = fork(); 
 						int ran = 0;
 						if (p == 0) {
+							setpgid(0, 0);
 							if (execv(command_list[i][j], command_list[i]) < 0) {
 		           				fprintf(stderr, "execv failed: %s\n", strerror(errno));	
 							}
 							else {
-								ran = 1;
+								ran = 1; 
 							}
 						}
 						else if (p > 0) {
@@ -219,10 +286,10 @@ int main(int argc, char **argv) {
 					i++;
 				} //end of outer else statement
 			} //end of parallel while loop
-			node * iter_node = list; //original wait loop
+			node * iter_node = list; //in original wait loop
 			while (iter_node != NULL) {
-				int status = 0;
-				waitpid(iter_node->p, &status, 1);
+				int status = 0; 
+				waitpid(-1, &status, WNOHANG);
 				iter_node = iter_node->next;
 			}
 		} //end of parallel mode
