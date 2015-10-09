@@ -10,10 +10,12 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <poll.h>
 #include <signal.h>
 #include <errno.h> 
 #include <stdbool.h> 
+
+//Authors: Cary Baun, Katie, Chungbin, and Leslie Subaldo
+//Date: October 9, 2015 
 
 typedef struct node {
 	pid_t p;
@@ -124,7 +126,6 @@ void free_paths(directory *paths) {
          paths = paths->next;
 	 	free(path);
     }
-	//free(paths); 
 }
 
 //checks whether command is a valid file in a directory 
@@ -177,25 +178,8 @@ int main(int argc, char **argv) {
 			waitpid(-1, &stat, WNOHANG);
 			//signal(SIGCHLD, check);
 		}
-
-		/* Code for Part II */
-        struct pollfd pfd[1];
-		pfd[0].fd = 0;
-		pfd[0].events = POLLIN;
-        pfd[0].revents = 0;
-
-        int rv = poll(&pfd[0], 1, 1000);
-		if (rv == 0) {
-			printf("Timeout\n");
-		}
-		else if (rv > 0) {
-			printf("You typed something on stdin\n");
-		}
-		else {
-			printf("There was some kind of error: %s\n", strerror(errno)); 
-		}
 		
-		// command prompt loop
+		//command prompt loop
 		char * prompt = "Prompt> ";
 		printf("%s", prompt);
 		fflush(stdout); //prints immediately 
@@ -286,7 +270,6 @@ int main(int argc, char **argv) {
 							}
 							else if (p > 0) {
 								wait(&p);
-								
 								free(cmd);  
 							}
 						}
@@ -303,6 +286,23 @@ int main(int argc, char **argv) {
 		} //end of sequential 
 
 		else if (mode == 1) { //parallel mode
+			/* Poll */
+		    struct pollfd pfd[1];
+			pfd[0].fd = 0;
+			pfd[0].events = POLLIN;
+		    pfd[0].revents = 0;
+
+		    int rv = poll(&pfd[0], 1, 1000);
+			if (rv == 0) {
+				printf("Timeout\n");
+			}
+			else if (rv > 0) {
+				printf("You typed something on stdin\n");
+			}
+			else {
+				printf("There was some kind of error: %s\n", strerror(errno)); 
+			}
+
 			int i = 0;
 			node *list = NULL;
 			while (command_list[i] != NULL) {
@@ -405,7 +405,4 @@ int main(int argc, char **argv) {
 		mode = change; // mode changes if 'change' has been modified
 	} //end of big while loop
 	return 0;
-}
-
-
-			
+}		
