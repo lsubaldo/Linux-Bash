@@ -21,7 +21,7 @@ typedef struct node {
 } node;
 
 typedef struct directory {
-	char dir[256];
+	char dir[32];
 	struct directory *next; 
 } directory; 
 
@@ -41,8 +41,8 @@ char** parse(const char *s, char* split) {
 		count++;
 	} 
 
-	int size = sizeof(char*);
-	char** tokens = malloc((count+1) * size);
+	//int size = sizeof(char*);
+	char** tokens = malloc((count+1) * sizeof(char *));
 
 	int i = 0;
 	for (token = strtok(tok_cpy, split); token != NULL; 
@@ -93,9 +93,9 @@ void uncomment(char* str) {
 directory *load_dir(const char *filename) {
 	FILE *fp = fopen(filename, "r"); 
 	directory *head = NULL; 
-	char new[256];
-	while (fgets(new, 256, fp) != NULL) {
-		new[strlen(new)-1] = '/'; 
+	char new[64];
+	while (fgets(new, 64, fp) != NULL) {
+		new[strlen(new)-1] = '/';
 		directory *d = malloc(sizeof(directory));
 		strcpy(d->dir, new);
 		if (head == NULL)  {
@@ -120,24 +120,27 @@ directory *load_dir(const char *filename) {
  */
 void free_paths(directory *paths) {
     while (paths != NULL) {
-         directory *temp = paths; 
+         directory *path = paths; 
          paths = paths->next;
-	 	free(temp);
+	 	free(path);
     }
+	//free(paths); 
 }
 
 //checks whether command is a valid file in a directory 
 char *is_file(directory *dir_list, char *buf) {
 	struct stat statresult; 
 	while (dir_list != NULL) {
-		char *temp = strdup(dir_list->dir); 
-		char *command = strcat(temp, buf); 
-		int rv = stat(command, &statresult); 
+	//created temp string so that strcat would not mess with original path in linked list
+		char *temp = malloc(sizeof(char) * 64); 
+		strcpy(temp, dir_list->dir); 
+		char *command = strcat(temp, buf);
+		int rv = stat(command, &statresult);
 		if (rv == 0) {
 			return command;
 		}
-		free(temp);
 		dir_list = dir_list->next; 
+		free(temp);
 	} 
 	return NULL;
 }
@@ -224,7 +227,7 @@ int main(int argc, char **argv) {
 		if (mode == 0) { // sequential mode
 			int i = 0;
 	  	    while (command_list[i] != NULL) {
-				if (command_list[i][0] == NULL) { // user enters only spaces, e.g. ; " " ; or " "
+				if (command_list[i][0] == NULL) { // user enters only spaces, e.g. ; " " ; or " " 
 					i++;
 				}	
 				else {			
@@ -234,6 +237,11 @@ int main(int argc, char **argv) {
 			    		fflush(stdout);
 						free_paths(shell_dir);   //free linked list before exit
 						free_tokens(command_chunks); //free tokens before exit
+						int k = 0;
+						while (k < chunk_count) {
+							free_tokens(command_list[k]);
+							k++;
+						}
 			    		exit(0);     
 					}
 					else if (strcasecmp(command_list[i][j], mode_word) == 0) { //mode
@@ -267,7 +275,7 @@ int main(int argc, char **argv) {
 						}
 				//if it does not, check to make sure it is part of a valid path for part 2
 						else {
-							cmd = is_file(shell_dir, command_list[i][j]);
+							cmd = is_file(shell_dir, command_list[i][j]); 
 						}
 						if (cmd != NULL) { 
 							pid_t p = fork(); 
@@ -275,23 +283,23 @@ int main(int argc, char **argv) {
 								if (execv(cmd, command_list[i]) < 0) {
 									fprintf(stderr, "execv failed: %s\n", strerror(errno));
 								} 
-								//Code from Part 1 
-								/*execv(command_list[i][j], command_list[i]); 
-								//if (execv(command_list[i][j], command_list[i]) < 0) {
-					       		//	fprintf(stderr, "execv failed: %s\n", strerror(errno));
-								}*/
 							}
 							else if (p > 0) {
 								wait(&p);
-								free(command_list[i]); 
-								//int status = 0;
-								//waitpid(-1, &status, WNOHANG); 
+								
+								free(cmd);  
 							}
 						}
 					} //end of else
 					i++;
 				} //end of outer else 
 			} //end of while loop
+			free_tokens(command_chunks); //free tokens before asking for new commands
+			int k = 0;
+			while (k < chunk_count) {
+				free_tokens(command_list[k]);
+				k++;
+			}
 		} //end of sequential 
 
 		else if (mode == 1) { //parallel mode
@@ -308,6 +316,11 @@ int main(int argc, char **argv) {
 			    		fflush(stdout);
 						free_paths(shell_dir); //free linked list before exit
 						free_tokens(command_chunks); //free tokens before exit
+						int i = 0;
+						while (command_list[i] != NULL) {
+							free_tokens(command_list[i]);
+							i++;
+						}
 			    		exit(0);      
 					} //end of if statement
 					else if (strcasecmp(command_list[i][j], mode_word) == 0) { //mode
@@ -326,45 +339,73 @@ int main(int argc, char **argv) {
 			    		}
 					} //end of else if
 					else {
-						pid_t pid = fork(); 
-						int ran = 0;
-						if (pid == 0) {
-							//setpgid(0, 0);
-							if (execv(command_list[i][j], command_list[i]) < 0) {
-		           				fprintf(stderr, "execv failed: %s\n", strerror(errno));	
+						char *cmd = NULL;
+						bool has_slash = false;
+						char *b = command_list[i][j];
+						for (int n=0 ; n<strlen(b); n++) {
+							if (b[n] == '/') {
+								has_slash = true;
+								break;
 							}
-							ran = 1;  
 						}
-						else if (pid > 0) {
-							//int status = 0;
-							//waitpid(-1, &status, WNOHANG); 
-							if (ran == 1) {
-								if (list == NULL)  {
-									node *head = NULL; 
-									head->p = pid;
-									head->next = NULL; 
-									list = head;	
+					//if it does, set cmd to b so that it can run as if it was in part 1
+						if (has_slash) {
+							cmd = b; 
+						}
+				//if it does not, check to make sure it is part of a valid path for part 2
+						else {
+							cmd = is_file(shell_dir, command_list[i][j]);
+						}
+						if (cmd != NULL) { 
+							pid_t pid = fork(); 
+							int ran = 0;
+							if (pid == 0) {
+								if (execv(cmd, command_list[i]) < 0) {
+		           					fprintf(stderr, "execv failed: %s\n", strerror(errno));	
 								}
-								else {
-									node *tmp = NULL;
-									tmp->p = pid;
-									tmp->next = list;
-									list = tmp;
-								} 
-							} 
-						} //end of parent statement
+								ran = 1; 
+								free(cmd); 
+							}
+							else if (pid > 0) {
+								if (ran == 1) {
+									if (list == NULL)  {
+										node *head = NULL; 
+										head->p = pid;
+										head->next = NULL; 
+										list = head;	
+									}
+									else {
+										node *tmp = NULL;
+										tmp->p = pid;
+										tmp->next = list;
+										list = tmp;
+									} 
+								}
+								free(cmd);  
+							} //end of parent statement
+						} //end of if cmd != NULL statement 
+						
 					} //end of else
 					i++;
 				} //end of outer else statement
 			} //end of parallel while loop
-			node * iter_node = list; //in original wait loop
-			while (iter_node != NULL) {
+			node * iter_node = list; 
+			while (iter_node != NULL) { //in original wait loop
 				int status = 0; 
 				waitpid(-1, &status, WNOHANG);
 				iter_node = iter_node->next; 
+			}
+			free_tokens(command_chunks); //free tokens before asking for new commands
+			int k = 0;
+			while (k < chunk_count) {
+				free_tokens(command_list[k]);
+				k++;
 			}
 		} //end of parallel mode
 		mode = change; // mode changes if 'change' has been modified
 	} //end of big while loop
 	return 0;
 }
+
+
+			
