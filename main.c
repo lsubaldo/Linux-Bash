@@ -27,6 +27,9 @@ typedef struct directory {
 
 /* main helper functions */
 
+/*
+ *Parses through the entries and splits it on split (either ";" or " ") 
+ */
 char** parse(const char *s, char* split) {
 	char* token; 
 	char* count_cpy = strdup(s);
@@ -70,8 +73,10 @@ void free_tokens(char **tokens) {
     free(tokens); // then free the array
 }
 
+/*
+ *Null-terminates comments
+ */
 void uncomment(char* str) {
-	//Takes care of comments
 	int num = 0;
 	while (num < strlen(str)) {
 		if (str[num] == '#') {
@@ -82,11 +87,9 @@ void uncomment(char* str) {
 	}
 }
 
-void check() {
-    int stat;
-	waitpid(-1, &stat, WNOHANG);
-}
-
+/*
+ *Loads the paths from the file, shell-config, into a linked list of type directory. 
+ */
 directory *load_dir(const char *filename) {
 	FILE *fp = fopen(filename, "r"); 
 	directory *head = NULL; 
@@ -112,6 +115,9 @@ directory *load_dir(const char *filename) {
 	return head;
 }
 
+/*
+ *Frees all the entries in the directory linked list 
+ */
 void free_paths(directory *paths) {
     while (paths != NULL) {
          directory *temp = paths; 
@@ -164,18 +170,28 @@ int main(int argc, char **argv) {
     char buffer[1024];
 	while (1) { // loop only exits through an exit() system call
 		if (mode == 1) {
-        	check();
-			signal(SIGCHLD, check);
+        	int stat;
+			waitpid(-1, &stat, WNOHANG);
+			//signal(SIGCHLD, check);
 		}
 
-		/* Code for Part II 
+		/* Code for Part II */
         struct pollfd pfd[1];
 		pfd[0].fd = 0;
 		pfd[0].events = POLLIN;
         pfd[0].revents = 0;
-        poll(&pfd[0], 1, 1000);
-		*/
 
+        int rv = poll(&pfd[0], 1, 1000);
+		if (rv == 0) {
+			printf("Timeout\n");
+		}
+		else if (rv > 0) {
+			printf("You typed something on stdin\n");
+		}
+		else {
+			printf("There was some kind of error: %s\n", strerror(errno)); 
+		}
+		
 		// command prompt loop
 		char * prompt = "Prompt> ";
 		printf("%s", prompt);
@@ -220,14 +236,17 @@ int main(int argc, char **argv) {
 						free_tokens(command_chunks); //free tokens before exit
 			    		exit(0);     
 					}
-					else if (strcasecmp(command_list[i][j], mode_word) == 0) {
+					else if (strcasecmp(command_list[i][j], mode_word) == 0) { //mode
 		   	    		j++;
+						//print current mode if mode is not specified 
 			    		if (command_list[i][j] == NULL) {
 							printf("Current mode: %s\n", mode_arr[mode]);
 			    		}
+						//change mode to sequential
 			    		else if (strcasecmp(command_list[i][j], seq) == 0) {
 							change = 0;
 			    		}
+						//change mode to parallel
 			    		else if (strcasecmp(command_list[i][j], par) == 0) {
 							change = 1;
 			    		}
@@ -242,17 +261,20 @@ int main(int argc, char **argv) {
 								break;
 							}
 						}
+					//if it does, set cmd to b so that it can run as if it was in part 1
 						if (has_slash) {
 							cmd = b; 
 						}
+				//if it does not, check to make sure it is part of a valid path for part 2
 						else {
 							cmd = is_file(shell_dir, command_list[i][j]);
 						}
 						if (cmd != NULL) { 
-							pid_t p = fork();
-							//command_list[i] = &cmd;  
+							pid_t p = fork(); 
 							if (p == 0) {
-								execv(cmd, command_list[i]); 
+								if (execv(cmd, command_list[i]) < 0) {
+									fprintf(stderr, "execv failed: %s\n", strerror(errno));
+								} 
 								//Code from Part 1 
 								/*execv(command_list[i][j], command_list[i]); 
 								//if (execv(command_list[i][j], command_list[i]) < 0) {
@@ -261,6 +283,9 @@ int main(int argc, char **argv) {
 							}
 							else if (p > 0) {
 								wait(&p);
+								free(command_list[i]); 
+								//int status = 0;
+								//waitpid(-1, &status, WNOHANG); 
 							}
 						}
 					} //end of else
@@ -271,7 +296,6 @@ int main(int argc, char **argv) {
 
 		else if (mode == 1) { //parallel mode
 			int i = 0;
-			int children = 0;
 			node *list = NULL;
 			while (command_list[i] != NULL) {
 				if (command_list[i][0] == NULL) { //user enters only spaces, e.g. ; " " ; or " "
@@ -288,44 +312,46 @@ int main(int argc, char **argv) {
 					} //end of if statement
 					else if (strcasecmp(command_list[i][j], mode_word) == 0) { //mode
 		   	    		j++;
-						//printf("%s\n", command_list[i][j]); 
-			    		if (command_list[i][j] == NULL) { // print mode
+						//print current mode if mode is not specified
+			    		if (command_list[i][j] == NULL) { 
 							printf("Current mode: %s\n", mode_arr[mode]);
 			    		}
-			    		else if (strcasecmp(command_list[i][j], seq) == 0) { // change mode (sequential)
+						//change mode to sequential 
+			    		else if (strcasecmp(command_list[i][j], seq) == 0) { 
 							change = 0;
 			    		}
-			    		else if (strcasecmp(command_list[i][j], par) == 0) { // change mode (parallel)
+						//change mode to parallel
+			    		else if (strcasecmp(command_list[i][j], par) == 0) { 
 							change = 1;
 			    		}
 					} //end of else if
 					else {
-						pid_t p = fork(); 
-						//int ran = 0;
-						if (p == 0) {
+						pid_t pid = fork(); 
+						int ran = 0;
+						if (pid == 0) {
 							//setpgid(0, 0);
 							if (execv(command_list[i][j], command_list[i]) < 0) {
 		           				fprintf(stderr, "execv failed: %s\n", strerror(errno));	
 							}
-							children++; 
+							ran = 1;  
 						}
-						else if (p > 0) {
-							int status = 0;
-							waitpid(-1, &status, WNOHANG); 
-							/*if (ran == 1) {
+						else if (pid > 0) {
+							//int status = 0;
+							//waitpid(-1, &status, WNOHANG); 
+							if (ran == 1) {
 								if (list == NULL)  {
 									node *head = NULL; 
-									head->p = p;
+									head->p = pid;
 									head->next = NULL; 
 									list = head;	
 								}
 								else {
 									node *tmp = NULL;
-									tmp->p = p;
+									tmp->p = pid;
 									tmp->next = list;
 									list = tmp;
 								} 
-							} */
+							} 
 						} //end of parent statement
 					} //end of else
 					i++;
