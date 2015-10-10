@@ -1,0 +1,9 @@
+
+//this was at the end of parallel mode to wait for everybody to be done before 
+//printing teh next prompt
+			node * iter_node = list; 
+			while (iter_node != NULL) { //in original wait loop
+				int status = 0; 
+				waitpid(-1, &status, WNOHANG);
+				iter_node = iter_node->next; 
+			}
